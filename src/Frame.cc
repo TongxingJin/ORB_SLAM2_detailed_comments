@@ -316,7 +316,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
 {
     // Frame ID
 	// Step 1 帧的ID 自增
-    mnId=nNextId++;
+    mnId=nNextId++;// ? static成员变量，且是在全局区域进行的初始化。从编译和运行的角度来讲，这是在什么阶段执行的初始化？
 
     // Step 2 计算图像金字塔的参数 
     // Scale Level Info
@@ -337,7 +337,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
 
     // ORB extraction
 	// Step 3 对这个单目图像进行提取特征点, 第一个参数0-左图， 1-右图
-    ExtractORB(0,imGray);
+    ExtractORB(0,imGray);// jin:基于图像金字塔计算fast特征和方向，并计算描述子
 
 	//求出特征点的个数
     N = mvKeys.size();
@@ -432,7 +432,7 @@ void Frame::ExtractORB(int flag, const cv::Mat &im)
 {
     // 判断是左图还是右图
     if(flag==0)
-        // 左图的话就套使用左图指定的特征点提取器，并将提取结果保存到对应的变量中 
+        // 左图的话就套使用左图指定的特征点提取器，并将提取结果保存到对应的变量中 // 从tracker传进来的
         // 这里使用了仿函数来完成，重载了括号运算符 ORBextractor::operator() 
         (*mpORBextractorLeft)(im,				//待提取特征点的图像
 							  cv::Mat(),		//掩摸图像, 实际没有用到

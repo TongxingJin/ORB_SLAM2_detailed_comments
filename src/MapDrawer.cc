@@ -77,10 +77,10 @@ void MapDrawer::DrawMapPoints()
     for(size_t i=0, iend=vpMPs.size(); i<iend;i++)
     {
         // 不包括ReferenceMapPoints（局部地图点）
-        if(vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i]))
+        if(vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i]))// 当前参考点中已经包含了该地图点
             continue;
         cv::Mat pos = vpMPs[i]->GetWorldPos();
-        glVertex3f(pos.at<float>(0),pos.at<float>(1),pos.at<float>(2));
+        glVertex3f(pos.at<float>(0),pos.at<float>(1),pos.at<float>(2));// 普通地图点绘制为黑色
     }
     glEnd();
 
@@ -88,7 +88,7 @@ void MapDrawer::DrawMapPoints()
     //显示局部地图点，大小为2个像素，红色
     glPointSize(mPointSize);
     glBegin(GL_POINTS);
-    glColor3f(1.0,0.0,0.0);
+    glColor3f(1.0,0.0,0.0);// RGB的顺序
 
     for(set<MapPoint*>::iterator sit=spRefMPs.begin(), send=spRefMPs.end(); sit!=send; sit++)
     {

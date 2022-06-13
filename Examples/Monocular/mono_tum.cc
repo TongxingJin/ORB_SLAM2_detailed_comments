@@ -46,15 +46,15 @@ int main(int argc, char **argv)
     vector<string> vstrImageFilenames;
     vector<double> vTimestamps;
     string strFile = string(argv[3])+"/rgb.txt";
-    LoadImages(strFile, vstrImageFilenames, vTimestamps);
+    LoadImages(strFile, vstrImageFilenames, vTimestamps);// 读取rgb图片名称和对应的时间戳
 
     int nImages = vstrImageFilenames.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
+    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);// 输入参数分别是词袋文件和配置文件，目的是初始化成员变量，特别是启动局部建图、回环和可视化的新线程
 
     // Vector for tracking time statistics
-    vector<float> vTimesTrack;
+    vector<float> vTimesTrack;// 存储每一帧实际跟踪所用时间
     vTimesTrack.resize(nImages);
 
     cout << endl << "-------" << endl;
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
             T = tframe-vTimestamps[ni-1];
 
         if(ttrack<T)
-            usleep((T-ttrack)*1e6);
+            usleep((T-ttrack)*1e6);// 处理时间比图像时间实际间隔短，sleep保持图像原本的频率
     }
 
     // Stop all threads

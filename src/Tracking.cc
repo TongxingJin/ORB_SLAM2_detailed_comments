@@ -185,7 +185,7 @@ Tracking::Tracking(
 
     // 在单目初始化的时候，会用mpIniORBextractor来作为特征点提取器
     if(sensor==System::MONOCULAR)
-        mpIniORBextractor = new ORBextractor(2*nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
+        mpIniORBextractor = new ORBextractor(2*nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);// jin:跟上面mpORBextractorLeft相比，除了目标特征点数翻倍，其他没有任何差别
 
     cout << endl  << "ORB Extractor Parameters: " << endl;
     cout << "- Number of Features: " << nFeatures << endl;
@@ -371,7 +371,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im,const double &timestamp)
     mImGray = im;
 
     // Step 1 ：将彩色图像转为灰度图像
-    //若图片是3、4通道的，还需要转化成灰度图
+    //若图片是3、4通道的，还需要转化成灰度图// jin:如果是灰度图就可以直接处理
     if(mImGray.channels()==3)
     {
         if(mbRGB)
@@ -389,6 +389,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im,const double &timestamp)
 
     // Step 2 ：构造Frame
     //判断该帧是不是初始化
+    // jin:特征提取都在如下的构造函数中进行
     if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET) //没有成功初始化的前一个状态就是NO_IMAGES_YET
         mCurrentFrame = Frame(
             mImGray,
@@ -432,7 +433,7 @@ void Tracking::Track()
     
     // mState为tracking的状态，包括 SYSTME_NOT_READY, NO_IMAGE_YET, NOT_INITIALIZED, OK, LOST
     // 如果图像复位过、或者第一次运行，则为NO_IMAGE_YET状态
-    if(mState==NO_IMAGES_YET)
+    if(mState==NO_IMAGES_YET)// jin:接收到任一帧图像，这个状态就会被覆盖
     {
         mState = NOT_INITIALIZED;
     }
@@ -447,7 +448,7 @@ void Tracking::Track()
     unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
     // Step 1：地图初始化
-    if(mState==NOT_INITIALIZED)
+    if(mState==NOT_INITIALIZED) // jin:还没正常完成初始化
     {
         if(mSensor==System::STEREO || mSensor==System::RGBD)
             //双目RGBD相机的初始化共用一个函数
@@ -873,7 +874,7 @@ void Tracking::StereoInitialization()
 void Tracking::MonocularInitialization()
 {
     // Step 1 如果单目初始器还没有被创建，则创建。后面如果重新初始化时会清掉这个
-    if(!mpInitializer)
+    if(!mpInitializer)// jin:一帧满足初始化要求的图像也没收到
     {
         // Set Reference Frame
         // 单目初始帧的特征点数必须大于100
@@ -882,7 +883,7 @@ void Tracking::MonocularInitialization()
             // 初始化需要两帧，分别是mInitialFrame，mCurrentFrame
             mInitialFrame = Frame(mCurrentFrame);
             // 用当前帧更新上一帧
-            mLastFrame = Frame(mCurrentFrame);
+            mLastFrame = Frame(mCurrentFrame);// todo jin:这个是干啥的？
             // mvbPrevMatched  记录"上一帧"所有特征点
             mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
             for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
@@ -900,9 +901,9 @@ void Tracking::MonocularInitialization()
             fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
 
             return;
-        }
+        }// jin:否则什么都不干就返回
     }
-    else    //如果单目初始化器已经被创建
+    else    //如果单目初始化器已经被创建// jin:已经存在一帧符合初始化要求的图像
     {
         // Try to initialize
         // Step 2 如果当前帧特征点数太少（不超过100），则重新构造初始器
@@ -929,7 +930,8 @@ void Tracking::MonocularInitialization()
             mvbPrevMatched,                 //在初始化参考帧中提取得到的特征点
             mvIniMatches,                   //保存匹配关系
             100);                           //搜索窗口大小
-
+        // jin:以上，对于mvIniMatches中不为-1的索引位，说明mInitialFrame中的该特征在mCurrentFrame中找到了匹配，那么mvbPrevMatched对应索引处的值被修改为mCurrentFrame中匹配特征的坐标
+        
         // Check if there are enough correspondences
         // Step 4 验证匹配结果，如果初始化的两帧之间的匹配点太少，重新初始化
         if(nmatches<100)

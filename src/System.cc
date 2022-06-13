@@ -68,7 +68,7 @@ System::System(const string &strVocFile,					//词典文件路径
        cerr << "Failed to open settings file at: " << strSettingsFile << endl;
        //然后退出
        exit(-1);
-    }
+    }// TODO:在哪里使用？难道只是验证文件的有效性？
 
     //Load ORB Vocabulary
     cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
@@ -89,7 +89,7 @@ System::System(const string &strVocFile,					//词典文件路径
     cout << "Vocabulary loaded!" << endl << endl;
 
     //Create KeyFrame Database
-    mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
+    mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);// 用词典初始化关键帧数据库
 
     //Create the Map
     mpMap = new Map();
@@ -146,7 +146,7 @@ System::System(const string &strVocFile,					//词典文件路径
 
     //Set pointers between threads
     //设置进程间的指针
-    mpTracker->SetLocalMapper(mpLocalMapper);
+    mpTracker->SetLocalMapper(mpLocalMapper);// 标记该成员变量，其成员函数Run在另外的独立线程中
     mpTracker->SetLoopClosing(mpLoopCloser);
 
     mpLocalMapper->SetTracker(mpTracker);
@@ -299,6 +299,7 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
 
     // Check mode change
     {
+        // ? 这里是为了响应可视化界面中的更改么？
         // 独占锁，主要是为了mbActivateLocalizationMode和mbDeactivateLocalizationMode不会发生混乱
         unique_lock<mutex> lock(mMutexMode);
         // mbActivateLocalizationMode为true会关闭局部地图线程
