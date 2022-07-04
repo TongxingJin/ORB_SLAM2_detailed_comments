@@ -151,18 +151,18 @@ KeyFrame* MapPoint::GetReferenceKeyFrame()
  */
 void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
 {
-    unique_lock<mutex> lock(mMutexFeatures);
-    // mObservations:观测到该MapPoint的关键帧KF和该MapPoint在KF中的索引
-    // 如果已经添加过观测，返回
-    if(mObservations.count(pKF)) 
-        return;
-    // 如果没有添加过观测，记录下能观测到该MapPoint的KF和该MapPoint在KF中的索引
-    mObservations[pKF]=idx;
+  unique_lock<mutex> lock(mMutexFeatures);
+  // mObservations:观测到该MapPoint的关键帧KF和该MapPoint在KF中的索引
+  // 如果已经添加过观测，返回
+  if(mObservations.count(pKF)) 
+    return;// ? jin:同一个关键帧可能观测到同一个地图点两次？
+  // 如果没有添加过观测，记录下能观测到该MapPoint的KF和该MapPoint在KF中的索引
+  mObservations[pKF]=idx;
 
-    if(pKF->mvuRight[idx]>=0)
-        nObs+=2; // 双目或者rgbd
-    else
-        nObs++; // 单目
+  if(pKF->mvuRight[idx]>=0)
+    nObs+=2; // 双目或者rgbd
+  else
+    nObs++; // 单目
 }
 
 
@@ -364,87 +364,87 @@ float MapPoint::GetFoundRatio()
  */
 void MapPoint::ComputeDistinctiveDescriptors()
 {
-    // Retrieve all observed descriptors
-    vector<cv::Mat> vDescriptors;
+  // Retrieve all observed descriptors
+  vector<cv::Mat> vDescriptors;
 
-    map<KeyFrame*,size_t> observations;
+  map<KeyFrame*,size_t> observations;
 
-    // Step 1 获取该地图点所有有效的观测关键帧信息
-    {
-        unique_lock<mutex> lock1(mMutexFeatures);
-        if(mbBad)
-            return;
-        observations=mObservations;
-    }
-
-    if(observations.empty())
+  // Step 1 获取该地图点所有有效的观测关键帧信息
+  {
+    unique_lock<mutex> lock1(mMutexFeatures);
+    if(mbBad)
         return;
+    observations=mObservations;
+  }
 
-    vDescriptors.reserve(observations.size());
+  if(observations.empty())
+    return;
 
-    // Step 2 遍历观测到该地图点的所有关键帧，对应的orb描述子，放到向量vDescriptors中
-    for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
-    {
-        // mit->first取观测到该地图点的关键帧
-        // mit->second取该地图点在关键帧中的索引
-        KeyFrame* pKF = mit->first;
+  vDescriptors.reserve(observations.size());
 
-        if(!pKF->isBad())        
-            // 取对应的描述子向量                                               
-            vDescriptors.push_back(pKF->mDescriptors.row(mit->second));     
-    }
+  // Step 2 遍历观测到该地图点的所有关键帧，对应的orb描述子，放到向量vDescriptors中
+  for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+  {
+    // mit->first取观测到该地图点的关键帧
+    // mit->second取该地图点在关键帧中的索引
+    KeyFrame* pKF = mit->first;
 
-    if(vDescriptors.empty())
-        return;
+    if(!pKF->isBad())        
+      // 取对应的描述子向量                                               
+      vDescriptors.push_back(pKF->mDescriptors.row(mit->second));     
+  }
 
-    // Compute distances between them
-    // Step 3 计算这些描述子两两之间的距离
-    // N表示为一共多少个描述子
-    const size_t N = vDescriptors.size();
+  if(vDescriptors.empty())
+    return;
+
+  // Compute distances between them
+  // Step 3 计算这些描述子两两之间的距离
+  // N表示为一共多少个描述子
+  const size_t N = vDescriptors.size();
 	
-    // 将Distances表述成一个对称的矩阵
-    // float Distances[N][N];
+  // 将Distances表述成一个对称的矩阵
+  // float Distances[N][N];
 	std::vector<std::vector<float> > Distances;
 	Distances.resize(N, vector<float>(N, 0));
 	for (size_t i = 0; i<N; i++)
+  {
+    // 和自己的距离当然是0
+    Distances[i][i]=0;
+    // 计算并记录不同描述子距离
+    for(size_t j=i+1;j<N;j++)
     {
-        // 和自己的距离当然是0
-        Distances[i][i]=0;
-        // 计算并记录不同描述子距离
-        for(size_t j=i+1;j<N;j++)
-        {
-            int distij = ORBmatcher::DescriptorDistance(vDescriptors[i],vDescriptors[j]);
-            Distances[i][j]=distij;
-            Distances[j][i]=distij;
-        }
+      int distij = ORBmatcher::DescriptorDistance(vDescriptors[i],vDescriptors[j]);
+      Distances[i][j]=distij;
+      Distances[j][i]=distij;
     }
+  }
 
-    // Take the descriptor with least median distance to the rest
-    // Step 4 选择最有代表性的描述子，它与其他描述子应该具有最小的距离中值
-    int BestMedian = INT_MAX;   // 记录最小的中值
-    int BestIdx = 0;            // 最小中值对应的索引
-    for(size_t i=0;i<N;i++)
-    {
-        // 第i个描述子到其它所有描述子之间的距离
-        // vector<int> vDists(Distances[i],Distances[i]+N);
+  // Take the descriptor with least median distance to the rest
+  // Step 4 选择最有代表性的描述子，它与其他描述子应该具有最小的距离中值
+  int BestMedian = INT_MAX;   // 记录最小的中值
+  int BestIdx = 0;            // 最小中值对应的索引
+  for(size_t i=0;i<N;i++)
+  {
+    // 第i个描述子到其它所有描述子之间的距离
+    // vector<int> vDists(Distances[i],Distances[i]+N);
 		vector<int> vDists(Distances[i].begin(), Distances[i].end());
 		sort(vDists.begin(), vDists.end());
 
-        // 获得中值
-        int median = vDists[0.5*(N-1)];
-        
-        // 寻找最小的中值
-        if(median<BestMedian)
-        {
-            BestMedian = median;
-            BestIdx = i;
-        }
-    }
-
+    // 获得中值
+    int median = vDists[0.5*(N-1)];
+    
+    // 寻找最小的中值
+    if(median<BestMedian)
     {
-        unique_lock<mutex> lock(mMutexFeatures);
-        mDescriptor = vDescriptors[BestIdx].clone();       
+      BestMedian = median;
+      BestIdx = i;
     }
+  }
+
+  {
+    unique_lock<mutex> lock(mMutexFeatures);
+    mDescriptor = vDescriptors[BestIdx].clone();       
+  }
 }
 
 // 获取当前地图点的描述子
