@@ -1247,7 +1247,7 @@ void TemplatedVocabulary<TDescriptor,F>::transform(const TDescriptor &feature,
   // level at which the node must be stored in nid, if given
   // m_L: depth levels, m_L = 6 in ORB-SLAM2
   // nid_level 当前特征点转化为的Word 所属的 node id，方便索引
-  const int nid_level = m_L - levelsup;
+  const int nid_level = m_L - levelsup;// jin:
   if(nid_level <= 0 && nid != NULL) *nid = 0; // root
 
   NodeId final_id = 0; // root
