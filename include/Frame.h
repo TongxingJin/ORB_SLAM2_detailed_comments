@@ -400,7 +400,7 @@ public:
     // FRAME_GRID_ROWS 48
     // FRAME_GRID_COLS 64
 	///这个向量中存储的是每个图像网格内特征点的id（左图）
-    std::vector<std::size_t> mGrid[FRAME_GRID_COLS][FRAME_GRID_ROWS];
+    std::vector<std::size_t> mGrid[FRAME_GRID_COLS][FRAME_GRID_ROWS];// vector的二维数组，数组中的每个元素都是个vector
 
     /** @} */
 

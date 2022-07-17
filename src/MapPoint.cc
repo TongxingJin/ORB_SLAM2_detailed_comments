@@ -491,52 +491,52 @@ bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
  */
 void MapPoint::UpdateNormalAndDepth()
 {
-    // Step 1 获得观测到该地图点的所有关键帧、坐标等信息
-    map<KeyFrame*,size_t> observations;
-    KeyFrame* pRefKF;
-    cv::Mat Pos;
-    {
-        unique_lock<mutex> lock1(mMutexFeatures);
-        unique_lock<mutex> lock2(mMutexPos);
-        if(mbBad)
-            return;
-
-        observations=mObservations; // 获得观测到该地图点的所有关键帧
-        pRefKF=mpRefKF;             // 观测到该点的参考关键帧（第一次创建时的关键帧）
-        Pos = mWorldPos.clone();    // 地图点在世界坐标系中的位置
-    }
-
-    if(observations.empty())
+  // Step 1 获得观测到该地图点的所有关键帧、坐标等信息
+  map<KeyFrame*,size_t> observations;
+  KeyFrame* pRefKF;
+  cv::Mat Pos;
+  {
+    unique_lock<mutex> lock1(mMutexFeatures);
+    unique_lock<mutex> lock2(mMutexPos);
+    if(mbBad)
         return;
 
-    // Step 2 计算该地图点的平均观测方向
-    // 能观测到该地图点的所有关键帧，对该点的观测方向归一化为单位向量，然后进行求和得到该地图点的朝向
-    // 初始值为0向量，累加为归一化向量，最后除以总数n
-    cv::Mat normal = cv::Mat::zeros(3,1,CV_32F);
-    int n=0;
-    for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
-    {
-        KeyFrame* pKF = mit->first;
-        cv::Mat Owi = pKF->GetCameraCenter();
-        // 获得地图点和观测到它关键帧的向量并归一化
-        cv::Mat normali = mWorldPos - Owi;
-        normal = normal + normali/cv::norm(normali);                       
-        n++;
-    } 
+    observations=mObservations; // 获得观测到该地图点的所有关键帧
+    pRefKF=mpRefKF;             // 观测到该点的参考关键帧（第一次创建时的关键帧）
+    Pos = mWorldPos.clone();    // 地图点在世界坐标系中的位置
+  }
 
-    cv::Mat PC = Pos - pRefKF->GetCameraCenter();                           // 参考关键帧相机指向地图点的向量（在世界坐标系下的表示）
-    const float dist = cv::norm(PC);                                        // 该点到参考关键帧相机的距离
-    const int level = pRefKF->mvKeysUn[observations[pRefKF]].octave;        // 观测到该地图点的当前帧的特征点在金字塔的第几层
-    const float levelScaleFactor =  pRefKF->mvScaleFactors[level];          // 当前金字塔层对应的尺度因子，scale^n，scale=1.2，n为层数
-    const int nLevels = pRefKF->mnScaleLevels;                              // 金字塔总层数，默认为8
+  if(observations.empty())
+    return;
 
-    {
-        unique_lock<mutex> lock3(mMutexPos);
-        // 使用方法见PredictScale函数前的注释
-        mfMaxDistance = dist*levelScaleFactor;                              // 观测到该点的距离上限
-        mfMinDistance = mfMaxDistance/pRefKF->mvScaleFactors[nLevels-1];    // 观测到该点的距离下限
-        mNormalVector = normal/n;                                           // 获得地图点平均的观测方向
-    }
+  // Step 2 计算该地图点的平均观测方向
+  // 能观测到该地图点的所有关键帧，对该点的观测方向归一化为单位向量，然后进行求和得到该地图点的朝向
+  // 初始值为0向量，累加为归一化向量，最后除以总数n
+  cv::Mat normal = cv::Mat::zeros(3,1,CV_32F);
+  int n=0;
+  for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+  {
+    KeyFrame* pKF = mit->first;
+    cv::Mat Owi = pKF->GetCameraCenter();
+    // 获得地图点和观测到它关键帧的向量并归一化
+    cv::Mat normali = mWorldPos - Owi;
+    normal = normal + normali/cv::norm(normali);                       
+    n++;
+  } 
+
+  cv::Mat PC = Pos - pRefKF->GetCameraCenter();                           // 参考关键帧相机指向地图点的向量（在世界坐标系下的表示）
+  const float dist = cv::norm(PC);                                        // 该点到参考关键帧相机的距离
+  const int level = pRefKF->mvKeysUn[observations[pRefKF]].octave;        // 观测到该地图点的当前帧的特征点在金字塔的第几层
+  const float levelScaleFactor =  pRefKF->mvScaleFactors[level];          // 当前金字塔层对应的尺度因子，scale^n，scale=1.2，n为层数
+  const int nLevels = pRefKF->mnScaleLevels;                              // 金字塔总层数，默认为8
+
+  {
+    unique_lock<mutex> lock3(mMutexPos);
+    // 使用方法见PredictScale函数前的注释
+    mfMaxDistance = dist*levelScaleFactor;                              // 观测到该点的距离上限// jin:层级越高，最大距离越大？
+    mfMinDistance = mfMaxDistance/pRefKF->mvScaleFactors[nLevels-1];    // 观测到该点的距离下限// todo jin:这是什么原则？
+    mNormalVector = normal/n;                                           // 获得地图点平均的观测方向
+  }
 }
 
 float MapPoint::GetMinDistanceInvariance()

@@ -291,7 +291,7 @@ private:
     // Current Matches from Reference to Current
     // Reference Frame: 1, Current Frame: 2
     /** Match的数据结构是pair,mvMatches12只记录Reference到Current匹配上的特征点对  */
-    vector<Match> mvMatches12;
+    vector<Match> mvMatches12;// jin:所有的匹配对
     /** 记录Reference Frame的每个特征点在Current Frame是否有匹配的特征点 */ 
     vector<bool> mvbMatched1; 
 

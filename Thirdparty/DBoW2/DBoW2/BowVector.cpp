@@ -47,7 +47,7 @@ void BowVector::addWeight(WordId id, WordValue v)
   if(vit != this->end() && !(this->key_comp()(id, vit->first)))
   {
     // 如果id = vit->first, 说明是同一个Word，权重更新 
-    vit->second += v;
+    vit->second += v;// jin:多次出现的单词，权重累加
   }
   else
   {

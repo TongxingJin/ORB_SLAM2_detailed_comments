@@ -314,82 +314,82 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
 {
-    // Frame ID
+  // Frame ID
 	// Step 1 帧的ID 自增
-    mnId=nNextId++;// ? static成员变量，且是在全局区域进行的初始化。从编译和运行的角度来讲，这是在什么阶段执行的初始化？
+  mnId=nNextId++;// ? jin:static成员变量，且是在全局区域进行的初始化。从编译和运行的角度来讲，这是在什么阶段执行的初始化？
 
-    // Step 2 计算图像金字塔的参数 
-    // Scale Level Info
+  // Step 2 计算图像金字塔的参数 
+  // Scale Level Info
 	//获取图像金字塔的层数
-    mnScaleLevels = mpORBextractorLeft->GetLevels();
+  mnScaleLevels = mpORBextractorLeft->GetLevels();
 	//获取每层的缩放因子
-    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+  mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
 	//计算每层缩放因子的自然对数
-    mfLogScaleFactor = log(mfScaleFactor);
+  mfLogScaleFactor = log(mfScaleFactor);
 	//获取各层图像的缩放因子
-    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+  mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
 	//获取各层图像的缩放因子的倒数
-    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+  mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
 	//获取sigma^2
-    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+  mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
 	//获取sigma^2的倒数
-    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
+  mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
-    // ORB extraction
+  // ORB extraction
 	// Step 3 对这个单目图像进行提取特征点, 第一个参数0-左图， 1-右图
-    ExtractORB(0,imGray);// jin:基于图像金字塔计算fast特征和方向，并计算描述子
+  ExtractORB(0,imGray);// jin:基于图像金字塔计算fast特征和方向，并计算描述子。这个是单目专用的构造函数，只初始化了左提取器，因此，参数0指定使用左提取器提取特征
 
 	//求出特征点的个数
-    N = mvKeys.size();
+  N = mvKeys.size();
 
 	//如果没有能够成功提取出特征点，那么就直接返回了
-    if(mvKeys.empty())
-        return;
+  if(mvKeys.empty())
+    return;
 
-    // Step 4 用OpenCV的矫正函数、内参对提取到的特征点进行矫正 
-    UndistortKeyPoints();
+  // Step 4 用OpenCV的矫正函数、内参对提取到的特征点进行矫正 
+  UndistortKeyPoints();
 
-    // Set no stereo information
+  // Set no stereo information
 	// 由于单目相机无法直接获得立体信息，所以这里要给右图像对应点和深度赋值-1表示没有相关信息
-    mvuRight = vector<float>(N,-1);
-    mvDepth = vector<float>(N,-1);
+  mvuRight = vector<float>(N,-1);
+  mvDepth = vector<float>(N,-1);
 
 
-    // 初始化本帧的地图点
-    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
+  // 初始化本帧的地图点
+  mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
 	// 记录地图点是否为外点，初始化均为外点false
-    mvbOutlier = vector<bool>(N,false);
+  mvbOutlier = vector<bool>(N,false);
 
-    // This is done only for the first Frame (or after a change in the calibration)
+  // This is done only for the first Frame (or after a change in the calibration)
 	//  Step 5 计算去畸变后图像边界，将特征点分配到网格中。这个过程一般是在第一帧或者是相机标定参数发生变化之后进行
-    if(mbInitialComputations)
-    {
-		// 计算去畸变后图像的边界
-        ComputeImageBounds(imGray);
+  if(mbInitialComputations)
+  {
+    // 计算去畸变后图像的边界
+    ComputeImageBounds(imGray);
 
 		// 表示一个图像像素相当于多少个图像网格列（宽）
-        mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);
+    mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);// jin:这里不同于特征提取时的cell。固定grid的数量（横向纵向个数），计算平均每个像素对应多少个grid
 		// 表示一个图像像素相当于多少个图像网格行（高）
-        mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
+    mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
 
-		//给类的静态成员变量复制
-        fx = K.at<float>(0,0);
-        fy = K.at<float>(1,1);
-        cx = K.at<float>(0,2);
-        cy = K.at<float>(1,2);
+    //给类的静态成员变量复制
+    fx = K.at<float>(0,0);
+    fy = K.at<float>(1,1);
+    cx = K.at<float>(0,2);
+    cy = K.at<float>(1,2);
 		// 猜测是因为这种除法计算需要的时间略长，所以这里直接存储了这个中间计算结果
-        invfx = 1.0f/fx;
-        invfy = 1.0f/fy;
+    invfx = 1.0f/fx;
+    invfy = 1.0f/fy;
 
 		//特殊的初始化过程完成，标志复位
-        mbInitialComputations=false;
-    }
+    mbInitialComputations=false;
+  }
 
-    //计算 basline
-    mb = mbf/fx;
+  //计算 basline
+  mb = mbf/fx;
 
 	// 将特征点分配到图像网格中 
-    AssignFeaturesToGrid();
+  AssignFeaturesToGrid();// todo jin:分配到不同grid的目的是什么？
 }
 
 /**
@@ -398,28 +398,28 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
  */
 void Frame::AssignFeaturesToGrid()
 {
-    // Step 1  给存储特征点的网格数组 Frame::mGrid 预分配空间
-	// ? 这里0.5 是为什么？节省空间？
-    // FRAME_GRID_COLS = 64，FRAME_GRID_ROWS=48
-    int nReserve = 0.5f*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS);
+  // Step 1  给存储特征点的网格数组 Frame::mGrid 预分配空间
+  // ? 这里0.5 是为什么？节省空间？
+  // FRAME_GRID_COLS = 64，FRAME_GRID_ROWS=48
+  int nReserve = 0.5f*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS);// todo jin:为什么是这么个值？至少也不应该乘0.5取均值啊
 	//开始对mGrid这个二维数组中的每一个vector元素遍历并预分配空间
-    for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
-        for (unsigned int j=0; j<FRAME_GRID_ROWS;j++)
-            mGrid[i][j].reserve(nReserve);
+  for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
+    for (unsigned int j=0; j<FRAME_GRID_ROWS;j++)
+      mGrid[i][j].reserve(nReserve);
 
-    // Step 2 遍历每个特征点，将每个特征点在mvKeysUn中的索引值放到对应的网格mGrid中
-    for(int i=0;i<N;i++)
-    {
+  // Step 2 遍历每个特征点，将每个特征点在mvKeysUn中的索引值放到对应的网格mGrid中
+  for(int i=0;i<N;i++)
+  {
 		//从类的成员变量中获取已经去畸变后的特征点
-        const cv::KeyPoint &kp = mvKeysUn[i];
+    const cv::KeyPoint &kp = mvKeysUn[i];
 
 		//存储某个特征点所在网格的网格坐标，nGridPosX范围：[0,FRAME_GRID_COLS], nGridPosY范围：[0,FRAME_GRID_ROWS]
-        int nGridPosX, nGridPosY;
+    int nGridPosX, nGridPosY;
 		// 计算某个特征点所在网格的网格坐标，如果找到特征点所在的网格坐标，记录在nGridPosX,nGridPosY里，返回true，没找到返回false
-        if(PosInGrid(kp,nGridPosX,nGridPosY))
-			//如果找到特征点所在网格坐标，将这个特征点的索引添加到对应网格的数组mGrid中
-            mGrid[nGridPosX][nGridPosY].push_back(i);
-    }
+    if(PosInGrid(kp,nGridPosX,nGridPosY))
+    //如果找到特征点所在网格坐标，将这个特征点的索引添加到对应网格的数组mGrid中
+    mGrid[nGridPosX][nGridPosY].push_back(i);
+  }
 }
 
 /**
@@ -577,6 +577,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
     return true;
 }
 
+// jin:以grid为单位，计算包含圆形的最小外接grid组，从grid中依次取点计算到target的距离验证是否符合要求，而且要是在0层的
 /**
  * @brief 找到在 以x,y为中心,半径为r的圆形内且金字塔层级在[minLevel, maxLevel]的特征点
  * 
@@ -590,82 +591,82 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
 vector<size_t> Frame::GetFeaturesInArea(const float &x, const float  &y, const float  &r, const int minLevel, const int maxLevel) const
 {
 	// 存储搜索结果的vector
-    vector<size_t> vIndices;
-    vIndices.reserve(N);
+  vector<size_t> vIndices;
+  vIndices.reserve(N);
 
-    // Step 1 计算半径为r圆左右上下边界所在的网格列和行的id
-    // 查找半径为r的圆左侧边界所在网格列坐标。这个地方有点绕，慢慢理解下：
-    // (mnMaxX-mnMinX)/FRAME_GRID_COLS：表示列方向每个网格可以平均分得几个像素（肯定大于1）
-    // mfGridElementWidthInv=FRAME_GRID_COLS/(mnMaxX-mnMinX) 是上面倒数，表示每个像素可以均分几个网格列（肯定小于1）
+  // Step 1 计算半径为r圆左右上下边界所在的网格列和行的id
+  // 查找半径为r的圆左侧边界所在网格列坐标。这个地方有点绕，慢慢理解下：
+  // (mnMaxX-mnMinX)/FRAME_GRID_COLS：表示列方向每个网格可以平均分得几个像素（肯定大于1）
+  // mfGridElementWidthInv=FRAME_GRID_COLS/(mnMaxX-mnMinX) 是上面倒数，表示每个像素可以均分几个网格列（肯定小于1）
 	// (x-mnMinX-r)，可以看做是从图像的左边界mnMinX到半径r的圆的左边界区域占的像素列数
 	// 两者相乘，就是求出那个半径为r的圆的左侧边界在哪个网格列中
-    // 保证nMinCellX 结果大于等于0
-    const int nMinCellX = max(0,(int)floor( (x-mnMinX-r)*mfGridElementWidthInv));
+  // 保证nMinCellX 结果大于等于0
+  const int nMinCellX = max(0,(int)floor( (x-mnMinX-r)*mfGridElementWidthInv));
 
 
 	// 如果最终求得的圆的左边界所在的网格列超过了设定了上限，那么就说明计算出错，找不到符合要求的特征点，返回空vector
-    if(nMinCellX>=FRAME_GRID_COLS)
-        return vIndices;
+  if(nMinCellX>=FRAME_GRID_COLS)
+    return vIndices;
 
 	// 计算圆所在的右边界网格列索引
-    const int nMaxCellX = min((int)FRAME_GRID_COLS-1, (int)ceil((x-mnMinX+r)*mfGridElementWidthInv));
+  const int nMaxCellX = min((int)FRAME_GRID_COLS-1, (int)ceil((x-mnMinX+r)*mfGridElementWidthInv));
 	// 如果计算出的圆右边界所在的网格不合法，说明该特征点不好，直接返回空vector
-    if(nMaxCellX<0)
-        return vIndices;
+  if(nMaxCellX<0)
+    return vIndices;
 
 	//后面的操作也都是类似的，计算出这个圆上下边界所在的网格行的id
-    const int nMinCellY = max(0,(int)floor((y-mnMinY-r)*mfGridElementHeightInv));
-    if(nMinCellY>=FRAME_GRID_ROWS)
-        return vIndices;
+  const int nMinCellY = max(0,(int)floor((y-mnMinY-r)*mfGridElementHeightInv));
+  if(nMinCellY>=FRAME_GRID_ROWS)
+    return vIndices;
 
-    const int nMaxCellY = min((int)FRAME_GRID_ROWS-1,(int)ceil((y-mnMinY+r)*mfGridElementHeightInv));
-    if(nMaxCellY<0)
-        return vIndices;
+  const int nMaxCellY = min((int)FRAME_GRID_ROWS-1,(int)ceil((y-mnMinY+r)*mfGridElementHeightInv));
+  if(nMaxCellY<0)
+    return vIndices;
 
-    // 检查需要搜索的图像金字塔层数范围是否符合要求
-    //? 疑似bug。(minLevel>0) 后面条件 (maxLevel>=0)肯定成立
-    //? 改为 const bool bCheckLevels = (minLevel>=0) || (maxLevel>=0);
-    const bool bCheckLevels = (minLevel>0) || (maxLevel>=0);
+  // 检查需要搜索的图像金字塔层数范围是否符合要求
+  //? 疑似bug。(minLevel>0) 后面条件 (maxLevel>=0)肯定成立
+  //? 改为 const bool bCheckLevels = (minLevel>=0) || (maxLevel>=0);
+  const bool bCheckLevels = (minLevel>0) || (maxLevel>=0);
 
-    // Step 2 遍历圆形区域内的所有网格，寻找满足条件的候选特征点，并将其index放到输出里
-    for(int ix = nMinCellX; ix<=nMaxCellX; ix++)
+  // Step 2 遍历圆形区域内的所有网格，寻找满足条件的候选特征点，并将其index放到输出里
+  for(int ix = nMinCellX; ix<=nMaxCellX; ix++)
+  {
+    for(int iy = nMinCellY; iy<=nMaxCellY; iy++)
     {
-        for(int iy = nMinCellY; iy<=nMaxCellY; iy++)
-        {
-            // 获取这个网格内的所有特征点在 Frame::mvKeysUn 中的索引
-            const vector<size_t> vCell = mGrid[ix][iy];
-			// 如果这个网格中没有特征点，那么跳过这个网格继续下一个
-            if(vCell.empty())
-                continue;
+      // 获取这个网格内的所有特征点在 Frame::mvKeysUn 中的索引
+      const vector<size_t> vCell = mGrid[ix][iy];
+      // 如果这个网格中没有特征点，那么跳过这个网格继续下一个
+      if(vCell.empty())
+        continue;
 
-            // 如果这个网格中有特征点，那么遍历这个图像网格中所有的特征点
-            for(size_t j=0, jend=vCell.size(); j<jend; j++)
-            {
+      // 如果这个网格中有特征点，那么遍历这个图像网格中所有的特征点
+      for(size_t j=0, jend=vCell.size(); j<jend; j++)
+      {
 				// 根据索引先读取这个特征点 
-                const cv::KeyPoint &kpUn = mvKeysUn[vCell[j]];
+        const cv::KeyPoint &kpUn = mvKeysUn[vCell[j]];
 				// 保证给定的搜索金字塔层级范围合法
-                if(bCheckLevels)
-                {
-					// cv::KeyPoint::octave中表示的是从金字塔的哪一层提取的数据
-					// 保证特征点是在金字塔层级minLevel和maxLevel之间，不是的话跳过
-                    if(kpUn.octave<minLevel)
-                        continue;
-                    if(maxLevel>=0)		//? 为何特意又强调？感觉多此一举
-                        if(kpUn.octave>maxLevel)
-                            continue;
-                }               
+        if(bCheckLevels)
+        {
+          // cv::KeyPoint::octave中表示的是从金字塔的哪一层提取的数据
+          // 保证特征点是在金字塔层级minLevel和maxLevel之间，不是的话跳过
+          if(kpUn.octave<minLevel)
+              continue;
+          if(maxLevel>=0)		//? 为何特意又强调？感觉多此一举
+              if(kpUn.octave>maxLevel)
+                  continue;
+        }               
 
-                // 通过检查，计算候选特征点到圆中心的距离，查看是否是在这个圆形区域之内
-                const float distx = kpUn.pt.x-x;
-                const float disty = kpUn.pt.y-y;
+        // 通过检查，计算候选特征点到圆中心的距离，查看是否是在这个圆形区域之内
+        const float distx = kpUn.pt.x-x;
+        const float disty = kpUn.pt.y-y;
 
 				// 如果x方向和y方向的距离都在指定的半径之内，存储其index为候选特征点
-                if(fabs(distx)<r && fabs(disty)<r)
-                    vIndices.push_back(vCell[j]);
-            }
-        }
+        if(fabs(distx)<r && fabs(disty)<r)
+            vIndices.push_back(vCell[j]);
+      }
     }
-    return vIndices;
+  }
+  return vIndices;
 }
 
 
@@ -681,19 +682,19 @@ vector<size_t> Frame::GetFeaturesInArea(const float &x, const float  &y, const f
 bool Frame::PosInGrid(const cv::KeyPoint &kp, int &posX, int &posY)
 {
 	// 计算特征点x,y坐标落在哪个网格内，网格坐标为posX，posY
-    // mfGridElementWidthInv=(FRAME_GRID_COLS)/(mnMaxX-mnMinX);
-    // mfGridElementHeightInv=(FRAME_GRID_ROWS)/(mnMaxY-mnMinY);
-    posX = round((kp.pt.x-mnMinX)*mfGridElementWidthInv);
-    posY = round((kp.pt.y-mnMinY)*mfGridElementHeightInv);
+  // mfGridElementWidthInv=(FRAME_GRID_COLS)/(mnMaxX-mnMinX);
+  // mfGridElementHeightInv=(FRAME_GRID_ROWS)/(mnMaxY-mnMinY);
+  posX = round((kp.pt.x-mnMinX)*mfGridElementWidthInv);
+  posY = round((kp.pt.y-mnMinY)*mfGridElementHeightInv);
 
-    //Keypoint's coordinates are undistorted, which could cause to go out of the image
-    // 因为特征点进行了去畸变，而且前面计算是round取整，所以有可能得到的点落在图像网格坐标外面
-    // 如果网格坐标posX，posY超出了[0,FRAME_GRID_COLS] 和[0,FRAME_GRID_ROWS]，表示该特征点没有对应网格坐标，返回false
-    if(posX<0 || posX>=FRAME_GRID_COLS || posY<0 || posY>=FRAME_GRID_ROWS)
-        return false;
+  //Keypoint's coordinates are undistorted, which could cause to go out of the image
+  // 因为特征点进行了去畸变，而且前面计算是round取整，所以有可能得到的点落在图像网格坐标外面
+  // 如果网格坐标posX，posY超出了[0,FRAME_GRID_COLS] 和[0,FRAME_GRID_ROWS]，表示该特征点没有对应网格坐标，返回false
+  if(posX<0 || posX>=FRAME_GRID_COLS || posY<0 || posY>=FRAME_GRID_ROWS)
+    return false;
 
 	// 计算成功返回true
-    return true;
+  return true;
 }
 
 /**
@@ -703,17 +704,17 @@ bool Frame::PosInGrid(const cv::KeyPoint &kp, int &posX, int &posY)
 void Frame::ComputeBoW()
 {
 	
-    // 判断是否以前已经计算过了，计算过了就跳过
-    if(mBowVec.empty())
-    {
-		// 将描述子mDescriptors转换为DBOW要求的输入格式
-        vector<cv::Mat> vCurrentDesc = Converter::toDescriptorVector(mDescriptors);
-		// 将特征点的描述子转换成词袋向量mBowVec以及特征向量mFeatVec
-        mpORBvocabulary->transform(vCurrentDesc,	//当前的描述子vector
-								   mBowVec,			//输出，词袋向量，记录的是单词的id及其对应权重TF-IDF值
-								   mFeatVec,		//输出，记录node id及其对应的图像 feature对应的索引
-								   4);				//4表示从叶节点向前数的层数
-    }
+  // 判断是否以前已经计算过了，计算过了就跳过
+  if(mBowVec.empty())
+  {
+    // 将描述子mDescriptors转换为DBOW要求的输入格式
+    vector<cv::Mat> vCurrentDesc = Converter::toDescriptorVector(mDescriptors);
+    // 将特征点的描述子转换成词袋向量mBowVec以及特征向量mFeatVec
+    mpORBvocabulary->transform(vCurrentDesc,	//当前的描述子vector // jin:计算所有描述子对应的单词，累积对应单词的权重，并分类到某个node，记录归属于该node的描述子的索引
+                mBowVec,			//输出，词袋向量，记录的是单词的id及其对应权重TF-IDF值
+                mFeatVec,		//输出，记录node id及其对应的图像 feature对应的索引
+                4);				//4表示从叶节点向前数的层数
+  }
 }
 
 /**

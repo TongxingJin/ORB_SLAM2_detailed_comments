@@ -410,10 +410,10 @@ protected:
     std::vector< std::vector <std::vector<size_t> > > mGrid;
 
     // Covisibility Graph
-     // 与该关键帧连接（至少15个共视地图点）的关键帧与权重
+     // 与该关键帧连接（至少15个共视地图点）的关键帧与权重// ! jin:这里错了吧，这个成员变量保存了所有的共视关系
     std::map<KeyFrame*,int> mConnectedKeyFrameWeights;   
     // 共视关键帧中权重从大到小排序后的关键帧          
-    std::vector<KeyFrame*> mvpOrderedConnectedKeyFrames;            
+    std::vector<KeyFrame*> mvpOrderedConnectedKeyFrames;// jin:15个共视以上的关键帧            
     // 共视关键帧中从大到小排序后的权重，和上面对应
     std::vector<int> mvOrderedWeights;                             
 

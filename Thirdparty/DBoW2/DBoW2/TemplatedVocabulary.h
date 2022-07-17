@@ -1169,8 +1169,8 @@ void TemplatedVocabulary<TDescriptor,F>::transform(
       if(w > 0) // not stopped
       { 
         // 如果Word 权重大于0，将其添加到BowVector 和 FeatureVector
-        v.addWeight(id, w);
-        fv.addFeature(nid, i_feature);
+        v.addWeight(id, w);// jin:累加word权重
+        fv.addFeature(nid, i_feature);// jin:记录node对应的特征点的索引，为了加快匹配，同一node下的特征点，可以认为很接近
       }
     }
     
@@ -1247,7 +1247,7 @@ void TemplatedVocabulary<TDescriptor,F>::transform(const TDescriptor &feature,
   // level at which the node must be stored in nid, if given
   // m_L: depth levels, m_L = 6 in ORB-SLAM2
   // nid_level 当前特征点转化为的Word 所属的 node id，方便索引
-  const int nid_level = m_L - levelsup;// jin:
+  const int nid_level = m_L - levelsup;// jin:父节点所在层级，叶子节点向上levelup作为父节点，相当于对叶子做了一个粗略的分类，该层节点的数量即为分类的总类别数
   if(nid_level <= 0 && nid != NULL) *nid = 0; // root
 
   NodeId final_id = 0; // root
@@ -1277,10 +1277,10 @@ void TemplatedVocabulary<TDescriptor,F>::transform(const TDescriptor &feature,
     }
     
     // 记录当前描述子转化为Word后所属的 node id，它距离叶子深度为levelsup
-    if(nid != NULL && current_level == nid_level)
+    if(nid != NULL && current_level == nid_level) // jin:已经找到父node id
       *nid = final_id;
     
-  } while( !m_nodes[final_id].isLeaf() );
+  } while( !m_nodes[final_id].isLeaf() );// jin:还不是叶子，继续向下搜索word
 
   // turn node id into word id
   // 取出 vocabulary tree中node距离当前feature 描述子距离最小的那个node的 Word id 和 weight

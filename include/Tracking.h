@@ -366,7 +366,7 @@ protected:
 
     //Local Map 局部地图相关
     ///参考关键帧
-    KeyFrame* mpReferenceKF;// 当前关键帧就是参考帧
+    KeyFrame* mpReferenceKF;// 当前关键帧就是参考帧// ? jin:与mpLastKeyFrame的差别是什么呢
     ///局部关键帧集合
     std::vector<KeyFrame*> mvpLocalKeyFrames;
     ///局部地图点的集合

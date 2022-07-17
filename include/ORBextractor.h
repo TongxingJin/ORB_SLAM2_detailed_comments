@@ -213,7 +213,7 @@ protected:
 
     std::vector<int> umax;	                    ///<计算特征点方向的时候，有个圆形的图像区域，这个vector中存储了每行u轴的边界（四分之一，其他部分通过对称获得）
 
-    std::vector<float> mvScaleFactor;		    ///<每层图像的缩放因子// ? 跟scaleFactor什么区别？
+    std::vector<float> mvScaleFactor;		    ///<每层图像的缩放因子// jin:scaleFactor是相邻两层之间的缩放因子，这里是每一层相对于第一层的缩放因子，连乘
     std::vector<float> mvInvScaleFactor;        ///<以及每层缩放因子的倒数
     std::vector<float> mvLevelSigma2;		    ///<存储每层的sigma^2,即上面每层图像相对于底层图像缩放倍数的平方
     std::vector<float> mvInvLevelSigma2;	    ///<sigma平方的倒数
